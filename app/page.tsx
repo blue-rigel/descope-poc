@@ -112,7 +112,7 @@ export default function Home() {
               variant="outline"
               className="h-14 justify-start gap-3 text-left bg-transparent"
             >
-              <Link href="/sso/app-a">
+              <Link href="/sso/app">
                 <Network className="h-5 w-5 text-cyan-600" />
                 <div>
                   <div className="font-medium">SSO Demo</div>

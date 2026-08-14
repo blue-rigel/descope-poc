@@ -3,20 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { getDescope, getToken } from "@/lib/descope-client";
+import {
+  getDescope,
+  getToken,
+  persistSessionCookie,
+} from "@/lib/descope-client";
 import { POST_LOGIN_PATH } from "@/lib/descope-config";
-
-/**
- * The OIDC completion path stores the session in localStorage (`DS`), but the
- * server-side proxy validates the `DS` *cookie*. Mirror the token into the
- * cookie so the middleware sees an authenticated session. `secure` is omitted
- * over HTTP (local dev) so the browser actually keeps it.
- */
-function persistSessionCookie(token: string) {
-  if (!token) return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `DS=${token}; path=/; SameSite=Lax${secure}`;
-}
 
 /**
  * Module-level guard: the OIDC token exchange must run exactly once per page

@@ -9,9 +9,28 @@ import {
   oidcIssuer,
 } from "./descope-config";
 
+/** Descope's default session-token cookie name (matches proxy.ts). */
+const SESSION_COOKIE = "DS";
+
 /** Current session JWT (from the `DS` cookie/storage), or "" if none. */
 export function getToken() {
   return getSessionToken();
+}
+
+/**
+ * Mirror the session token into the `DS` cookie the server-side proxy reads.
+ * Needed after the OIDC flow, which otherwise only stores the token in
+ * localStorage. `secure` is omitted over HTTP (local dev) so the browser keeps it.
+ */
+export function persistSessionCookie(token: string) {
+  if (!token) return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${SESSION_COOKIE}=${token}; path=/; SameSite=Lax${secure}`;
+}
+
+/** Expire the `DS` cookie so the proxy immediately sees the user as logged out. */
+export function clearSessionCookie() {
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
 /**

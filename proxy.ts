@@ -8,7 +8,7 @@ import { LOGIN_PATH, POST_LOGIN_PATH } from "@/lib/descope-config";
 const SESSION_COOKIE = "DS";
 
 /** Routes that require an authenticated session. */
-const PROTECTED = ["/auth/settings"];
+const PROTECTED = ["/auth/settings", "/sessions"];
 
 /** Routes an already-authenticated user should be bounced away from. */
 const AUTH_ONLY = ["/login-native"];
@@ -40,5 +40,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/auth/settings/:path*", "/login-native/:path*"],
+  matcher: [
+    "/auth/settings/:path*",
+    "/sessions/:path*",
+    "/login-native/:path*",
+  ],
 };
