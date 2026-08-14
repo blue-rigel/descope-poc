@@ -12,7 +12,24 @@ import Link from "next/link";
 
 export default function Home() {
   const clearCache = () => {
+    if (
+      !window.confirm(
+        "Clear all local storage, session storage, and cookies for this site?",
+      )
+    ) {
+      return;
+    }
     localStorage.clear();
+    sessionStorage.clear();
+    // Expire every cookie readable by JS (path=/). HttpOnly cookies can't be
+    // cleared from the browser, but Descope's DS/DSR session cookies aren't
+    // HttpOnly, so this signs the user out too.
+    for (const cookie of document.cookie.split(";")) {
+      const name = cookie.split("=")[0]?.trim();
+      if (name) {
+        document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+      }
+    }
   };
 
   return (
@@ -165,7 +182,7 @@ export default function Home() {
             className="gap-2 text-muted-foreground hover:text-foreground"
           >
             <Trash2 className="h-4 w-4" />
-            Clear Local Storage
+            Clear Storage &amp; Cookies
           </Button>
         </CardFooter>
       </Card>
