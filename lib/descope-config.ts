@@ -8,14 +8,19 @@
 export const DESCOPE_PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID ?? "";
 
 /**
- * OIDC application client ID (from the Descope "Applications" / inbound OIDC
- * app). Used for the SSO hosted-login redirect flow. The matching client SECRET
- * is intentionally NOT read anywhere: the browser Authorization-Code + PKCE
- * flow never uses it, so it must stay server-only (and ideally be renamed off
- * the NEXT_PUBLIC_ prefix).
+ * The Descope Inbound (OIDC) Application ID. This is what the web-js OIDC flow
+ * uses as `applicationId` for the SSO hosted-login redirect — NOT the raw
+ * client ID. The client secret is never read: the browser Authorization-Code +
+ * PKCE flow does not use it.
+ */
+export const DESCOPE_APP_ID = process.env.NEXT_PUBLIC_APP_ID ?? "";
+
+/**
+ * The inbound OIDC application's client ID. oidc-client-ts requires this
+ * whenever a custom `issuer` is supplied. The matching client SECRET is never
+ * read (browser Authorization-Code + PKCE flow does not use it).
  */
 export const DESCOPE_CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID ?? "";
-
 /**
  * Optional custom base URL (e.g. a CNAME'd auth domain). Falls back to Descope's
  * shared hosted domain. Override with NEXT_PUBLIC_DESCOPE_BASE_URL if needed.

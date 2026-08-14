@@ -3,8 +3,8 @@
 import createSdk, { getSessionToken } from "@descope/web-js-sdk";
 
 import {
+  DESCOPE_APP_ID,
   DESCOPE_BASE_URL,
-  DESCOPE_CLIENT_ID,
   DESCOPE_PROJECT_ID,
   oidcIssuer,
 } from "./descope-config";
@@ -40,9 +40,11 @@ export function getDescope() {
       // Enables sdk.oidc.* (hosted login via OIDC redirect). Issuer is the
       // project's OIDC endpoint; clientId defaults to the project ID.
       oidcConfig: {
-        // The Descope OIDC application's client ID (falls back to project ID).
-        clientId: DESCOPE_CLIENT_ID || DESCOPE_PROJECT_ID,
-        applicationId: DESCOPE_CLIENT_ID || DESCOPE_PROJECT_ID,
+        // Descope Inbound (OIDC) Application ID drives the hosted-login flow.
+        // For this inbound app the app ID is ALSO the OIDC client_id — using the
+        // long CLIENT_ID value here breaks the login-page redirect.
+        applicationId: DESCOPE_APP_ID || DESCOPE_PROJECT_ID,
+        clientId: DESCOPE_APP_ID || DESCOPE_PROJECT_ID,
         issuer: oidcIssuer(),
         scope: "openid profile email",
       },

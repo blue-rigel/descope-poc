@@ -3,8 +3,29 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { getDescope } from "@/lib/descope-client";
+import { getDescope, getToken } from "@/lib/descope-client";
 import { POST_LOGIN_PATH } from "@/lib/descope-config";
+
+/**
+ * The OIDC completion path stores the session in localStorage (`DS`), but the
+ * server-side proxy validates the `DS` *cookie*. Mirror the token into the
+ * cookie so the middleware sees an authenticated session. `secure` is omitted
+ * over HTTP (local dev) so the browser actually keeps it.
+ */
+function persistSessionCookie(token: string) {
+  if (!token) return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `DS=${token}; path=/; SameSite=Lax${secure}`;
+}
+
+/**
+ * Module-level guard: the OIDC token exchange must run exactly once per page
+ * load. React Strict Mode (dev) double-invokes effects, and a second
+ * finishLoginIfNeed() call fails with "Invalid PKCE" because the first call
+ * already consumed the stored code_verifier. A ref won't survive the Strict
+ * Mode remount; a module-scoped flag does.
+ */
+let exchangeStarted = false;
 
 /**
  * OIDC redirect landing page for the SSO demo. Descope sends the user here with
@@ -16,23 +37,22 @@ export default function SsoCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (exchangeStarted) return;
+    exchangeStarted = true;
+
     (async () => {
       try {
         await getDescope().oidc.finishLoginIfNeed();
-        if (cancelled) return;
+        // Mirror the OIDC session into the `DS` cookie the proxy validates.
+        persistSessionCookie(getToken());
         router.replace(POST_LOGIN_PATH);
         router.refresh();
       } catch (err) {
-        if (cancelled) return;
         setError(
           err instanceof Error ? err.message : "Could not complete SSO login",
         );
       }
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [router]);
 
   return (
