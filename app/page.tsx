@@ -115,9 +115,9 @@ export default function Home() {
               <Link href="/sso/app-a">
                 <Network className="h-5 w-5 text-cyan-600" />
                 <div>
-                  <div className="font-medium">SSO Demo (App A / App B)</div>
+                  <div className="font-medium">SSO Demo</div>
                   <div className="text-sm text-muted-foreground">
-                    Log in once, both apps share the same session
+                    Redirect to hosted login, return to profile on success
                   </div>
                 </div>
               </Link>
