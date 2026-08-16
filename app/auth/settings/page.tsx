@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getDescope, getToken } from "@/lib/descope-client";
+import { getDescope } from "@/lib/descope-client";
 import { LOGIN_PATH } from "@/lib/descope-config";
 import { cn } from "@/lib/utils";
 
@@ -170,8 +170,12 @@ function TotpCard({
     setMsg(null);
     try {
       const sdk = getDescope();
-      // update() adds a TOTP factor to the currently authenticated user.
-      const res = await sdk.totp.update(loginId, getToken());
+      // update() adds a TOTP factor to the currently authenticated user. Omit
+      // the token arg: the SDK reads the *refresh* token from storage itself.
+      // (Passing the session token here causes "Failed to find JWT refresh
+      // token".) Requires the refresh token to be JS-readable — see
+      // descope-client.ts.
+      const res = await sdk.totp.update(loginId);
       if (!res.ok || !res.data) {
         setErr(res.error?.errorMessage ?? "Could not start TOTP enrollment");
         return;
@@ -231,12 +235,7 @@ function TotpCard({
         {totp && (
           <div className="space-y-3">
             <div className="flex items-center gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={totp.image}
-                alt="TOTP QR code"
-                className="h-40 w-40 rounded border bg-white p-2"
-              />
+              <TotpQr image={totp.image} />
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">
                   Scan the QR, or enter this key manually:
@@ -299,9 +298,12 @@ function PasskeyCard({
     setMsg(null);
     try {
       const sdk = getDescope();
-      // The combined callable runs the full WebAuthn ceremony via helpers and
-      // adds the passkey to the currently authenticated user.
-      const res = await sdk.webauthn.update(loginId, getToken());
+      // Runs the full WebAuthn ceremony and adds the passkey to the current
+      // user. Omit the token arg so the SDK reads the *refresh* token from
+      // storage (passing the session token causes "Failed to find JWT refresh
+      // token"). Requires the refresh token to be JS-readable — see
+      // descope-client.ts.
+      const res = await sdk.webauthn.update(loginId);
       if (!res.ok) {
         setErr(res.error?.errorMessage ?? "Passkey enrollment failed");
         return;
@@ -344,6 +346,43 @@ function PasskeyCard({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Descope's TOTP `image` can arrive in several shapes depending on project
+ * config: a ready `data:` URI, raw base64 (no prefix), or a raw `<svg>` string.
+ * A bare `<img src>` only handles the first, so normalize here.
+ */
+function TotpQr({ image }: { image: string }) {
+  const src = toImageSrc(image);
+  const cls = "h-40 w-40 rounded border bg-white p-2";
+
+  // Raw inline SVG markup — render it directly.
+  if (image.trimStart().startsWith("<svg")) {
+    return (
+      <div
+        className={cls}
+        aria-label="TOTP QR code"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: image }}
+      />
+    );
+  }
+
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="TOTP QR code" className={cls} />;
+}
+
+function toImageSrc(image: string): string {
+  const trimmed = image.trim();
+  // Already a usable URI.
+  if (/^data:|^https?:\/\//i.test(trimmed)) return trimmed;
+  // SVG markup → data URI.
+  if (trimmed.startsWith("<svg")) {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(trimmed)}`;
+  }
+  // Otherwise assume raw base64 PNG.
+  return `data:image/png;base64,${trimmed}`;
 }
 
 function StatusBadge({ on }: { on: boolean }) {

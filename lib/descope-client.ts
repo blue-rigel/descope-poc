@@ -40,6 +40,16 @@ export function clearSessionCookie() {
  * - `sessionTokenViaCookie` also writes the session token to the `DS` cookie so
  *   the server-side proxy middleware can read and validate it.
  * - `autoRefresh` keeps the session token fresh in the background.
+ *
+ * ⚠️ TOTP/WebAuthn ENROLLMENT (totp.update / webauthn.update) needs the
+ * REFRESH token, which the SDK reads from the `DSR` localStorage key. That key
+ * is only populated when the Descope project is NOT configured to store the
+ * refresh token in an HttpOnly cookie. If enrollment fails with "Failed to find
+ * JWT refresh token", flip the project setting:
+ *   Descope Console → Project → Settings → Tokens (or Session Management) →
+ *   turn OFF "Use HttpOnly cookie for refresh token" (a.k.a. store refresh token
+ *   in local storage). With persistTokens:true, the SDK then keeps `DSR` in
+ *   localStorage where getRefreshToken() can read it.
  */
 let sdk: ReturnType<typeof createSdk> | undefined;
 
