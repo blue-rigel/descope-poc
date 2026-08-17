@@ -9,6 +9,7 @@ import {
   LogOut,
   ShieldCheck,
   ShieldOff,
+  Trash2,
   User as UserIcon,
 } from "lucide-react";
 
@@ -28,6 +29,15 @@ import { cn } from "@/lib/utils";
 type MeUser = Awaited<
   ReturnType<ReturnType<typeof getDescope>["me"]>
 >["data"];
+
+/** Mirrors the node-sdk UserPasskey shape returned by /api/user/passkeys. */
+type UserPasskey = {
+  id?: string;
+  rpId?: string;
+  kind?: string;
+  displayName?: string;
+  createdTime?: number;
+};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -284,6 +294,8 @@ function PasskeyCard({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [passkeys, setPasskeys] = useState<UserPasskey[] | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     getDescope()
@@ -291,6 +303,20 @@ function PasskeyCard({
       .then(setSupported)
       .catch(() => setSupported(false));
   }, []);
+
+  const loadPasskeys = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/passkeys", { cache: "no-store" });
+      const body = await res.json();
+      if (res.ok) setPasskeys((body.passkeys ?? []) as UserPasskey[]);
+    } catch {
+      // Non-fatal for the demo — enrollment still works without the list.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPasskeys();
+  }, [loadPasskeys]);
 
   const enroll = async () => {
     setBusy(true);
@@ -310,10 +336,33 @@ function PasskeyCard({
       }
       setMsg("Passkey enrolled successfully.");
       onChange();
+      await loadPasskeys();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Passkey enrollment cancelled");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const removePasskey = async (id: string) => {
+    if (!window.confirm("Remove this passkey?")) return;
+    setDeletingId(id);
+    setErr(null);
+    setMsg(null);
+    try {
+      const res = await fetch(
+        `/api/user/passkeys?credentialId=${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(body.error ?? "Could not remove passkey");
+        return;
+      }
+      setPasskeys((prev) => prev?.filter((p) => p.id !== id) ?? prev);
+      onChange();
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -322,12 +371,53 @@ function PasskeyCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Fingerprint className="h-5 w-5" /> Passkey / WebAuthn
+          <StatusBadge on={Boolean(passkeys && passkeys.length > 0)} />
         </CardTitle>
         <CardDescription>
           Register a device biometric or security key as a passkey.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
+        {passkeys && passkeys.length > 0 && (
+          <ul className="divide-y rounded-md border">
+            {passkeys.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center gap-3 px-3 py-2 text-sm"
+              >
+                <Fingerprint className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">
+                    {p.displayName || p.kind || "Passkey"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {p.createdTime
+                      ? `Added ${new Date(p.createdTime * 1000).toLocaleDateString()}`
+                      : ""}
+                    {p.rpId ? ` · ${p.rpId}` : ""}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                  disabled={!p.id || deletingId === p.id}
+                  onClick={() => p.id && removePasskey(p.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deletingId === p.id ? "Removing…" : "Remove"}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {passkeys && passkeys.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No passkeys enrolled yet.
+          </p>
+        )}
+
         {supported === false ? (
           <p className="text-sm text-muted-foreground">
             This browser/device does not support WebAuthn passkeys.

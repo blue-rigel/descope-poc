@@ -8,7 +8,7 @@ import { LOGIN_PATH, POST_LOGIN_PATH } from "@/lib/descope-config";
 const SESSION_COOKIE = "DS";
 
 /** Routes that require an authenticated session. */
-const PROTECTED = ["/auth/settings", "/sessions"];
+const PROTECTED = ["/auth/settings", "/sessions", "/sensitive"];
 
 /** Routes an already-authenticated user should be bounced away from. */
 const AUTH_ONLY = ["/login-native"];
@@ -43,6 +43,7 @@ export const config = {
   matcher: [
     "/auth/settings/:path*",
     "/sessions/:path*",
+    "/sensitive/:path*",
     "/login-native/:path*",
   ],
 };

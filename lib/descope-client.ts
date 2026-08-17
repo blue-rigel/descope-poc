@@ -12,9 +12,30 @@ import {
 /** Descope's default session-token cookie name (matches proxy.ts). */
 const SESSION_COOKIE = "DS";
 
+/** Descope's default refresh-token cookie / localStorage key. */
+const REFRESH_KEY = "DSR";
+
 /** Current session JWT (from the `DS` cookie/storage), or "" if none. */
 export function getToken() {
   return getSessionToken();
+}
+
+/**
+ * Current REFRESH JWT, or "" if none / stored HttpOnly. Step-up auth
+ * (totp.verify / webauthn.signIn with `stepup:true`) needs this to prove the
+ * existing session. Empty here means the refresh token is in an HttpOnly cookie
+ * — see the note on getDescope() below.
+ */
+export function getRefreshJwt() {
+  if (typeof document === "undefined") return "";
+  // Mirror how the SDK resolves it: DSR cookie first, then localStorage. Both
+  // are empty when the project stores the refresh token in an HttpOnly cookie.
+  const fromCookie = document.cookie
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${REFRESH_KEY}=`))
+    ?.slice(REFRESH_KEY.length + 1);
+  return fromCookie || window.localStorage.getItem(REFRESH_KEY) || "";
 }
 
 /**
