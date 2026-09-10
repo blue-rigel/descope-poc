@@ -7,7 +7,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Globe, Lock, Mail, Monitor, ShieldCheck, Smartphone, Trash2, Users, Network } from "lucide-react";
+import { Globe, KeyRound, Lock, Mail, Monitor, Network, ShieldCheck, Smartphone, Trash2, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -52,9 +52,25 @@ export default function Home() {
               <Link href="/auth/login">
                 <Mail className="h-5 w-5 text-blue-600" />
                 <div>
-                  <div className="font-medium">Email/Password Login (Browser)</div>
+                  <div className="font-medium">Custom Descope Flow</div>
                   <div className="text-sm text-muted-foreground">
-                    Hosted-UI flow, cookie-based session
+                    BYOS password, email OTP, and Google authentication
+                  </div>
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-14 justify-start gap-3 text-left bg-transparent"
+            >
+              <Link href="/login-otp">
+                <KeyRound className="h-5 w-5 text-violet-600" />
+                <div>
+                  <div className="font-medium">Email OTP Signup / Login</div>
+                  <div className="text-sm text-muted-foreground">
+                    Passwordless sign-up-or-in with a 6-digit code
                   </div>
                 </div>
               </Link>
@@ -87,6 +103,22 @@ export default function Home() {
                   <div className="font-medium">Continue with Google</div>
                   <div className="text-sm text-muted-foreground">
                     Social sign-in
+                  </div>
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-14 justify-start gap-3 text-left bg-transparent"
+            >
+              <Link href="/me">
+                <UserRound className="h-5 w-5 text-indigo-600" />
+                <div>
+                  <div className="font-medium">My Profile</div>
+                  <div className="text-sm text-muted-foreground">
+                    View the currently authenticated user
                   </div>
                 </div>
               </Link>

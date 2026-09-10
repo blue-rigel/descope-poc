@@ -24,7 +24,6 @@ import {
   getDescope,
   getRefreshJwt,
   getToken,
-  persistSessionCookie,
 } from "@/lib/descope-client";
 import { POST_LOGIN_PATH } from "@/lib/descope-config";
 import { cn } from "@/lib/utils";
@@ -304,9 +303,7 @@ function SensitiveArea({
 
   const afterStepUp = (sessionJwt: string) => {
     const jwt = sessionJwt || getToken();
-    // Mirror the elevated session into the DS cookie and decode the fresh token
-    // directly (don't re-read storage, which may not be written yet).
-    persistSessionCookie(jwt);
+    // Decode the returned token directly; SDK storage may not be updated yet.
     onSteppedUp(jwt);
   };
 

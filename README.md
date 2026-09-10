@@ -1,4 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a Next.js proof of concept for Descope authentication, including a
+custom Bring Your Own Screen (BYOS) Flow built with
+`@descope/web-component`.
+
+## BYOS Flow Setup
+
+Create a Descope Flow and configure these public environment variables. Copy
+the exact Flow ID from the Descope Console, ensure the Flow belongs to the
+configured project, and activate it before running this page.
+
+```dotenv
+NEXT_PUBLIC_PROJECT_ID=<project-id>
+NEXT_PUBLIC_DESCOPE_FLOW_ID=<exact-active-flow-id-from-descope-console>
+# Optional for a custom Descope domain:
+NEXT_PUBLIC_DESCOPE_BASE_URL=https://auth.example.com
+```
+
+The `/auth/login` route recognizes this explicit Flow contract:
+
+| Screen name | Interaction IDs | Inputs |
+| --- | --- | --- |
+| `Welcome Screen` | `ygSMAX5_SA`, `gSxXWXi6pr` | `email`, or `provider: google` |
+| `Magic Link Sent` | `resend`, `EbW8KMdjAx` | `email` for resend |
+
+Use these exact, unique names in the Flow Builder or update the constants in
+`app/auth/login/page.tsx`. The generated IDs above belong to the currently
+active `headless-sign-up-or-in` Flow and must be updated if its interactions
+are recreated. Configure Google OAuth for popup mode and allow
+`http://localhost:3000/auth/login` plus the production `/auth/login` URL as
+redirect URLs.
+
+The web component owns Flow execution, polling, redirects, WebAuthn, and token
+persistence. `/auth/login` uses its `onScreenUpdate` callback to replace the
+two screens above with local React UI and calls the supplied `next` function
+with the configured Interaction ID and inputs. Other screens fall back to the
+Descope-rendered UI. Successful Flow responses are refreshed through the shared
+web SDK so its `DS` cookie is available to `proxy.ts`.
 
 ## Getting Started
 

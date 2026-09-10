@@ -34,11 +34,17 @@ export function getDescopeServer() {
  * header). Returns the decoded auth info on success, or `null` if the token is
  * missing, malformed, or expired.
  */
-export async function validateDescopeSession(sessionJwt: string | undefined) {
+export async function validateDescopeSession(
+  sessionJwt: string | undefined,
+  options?: { logError?: boolean },
+) {
   if (!sessionJwt) return null;
   try {
     return await getDescopeServer().validateSession(sessionJwt);
-  } catch {
+  } catch (error) {
+    if (options?.logError) {
+      console.error("Descope session validation failed", error);
+    }
     return null;
   }
 }

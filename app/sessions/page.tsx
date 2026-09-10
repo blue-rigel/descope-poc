@@ -12,10 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  clearSessionCookie,
-  getDescope,
-} from "@/lib/descope-client";
+import { getDescope } from "@/lib/descope-client";
 import { LOGIN_PATH } from "@/lib/descope-config";
 
 type HistoryRecord = {
@@ -60,11 +57,10 @@ export default function SessionsPage() {
   const logoutEverywhere = async () => {
     setRevoking(true);
     try {
-      // Descope has no per-session revoke — logoutAll ends every session
-      // (including this one). Clear the mirrored cookie so the proxy sees it.
+      // Descope has no per-session revoke — logoutAll ends every session,
+      // including this one.
       await getDescope().logoutAll();
     } finally {
-      clearSessionCookie();
       router.push(LOGIN_PATH);
       router.refresh();
     }

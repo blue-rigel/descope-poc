@@ -28,11 +28,31 @@ export const DESCOPE_CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID ?? "";
 export const DESCOPE_BASE_URL =
   process.env.NEXT_PUBLIC_DESCOPE_BASE_URL ?? undefined;
 
+/** Flow executed by the custom web-js SDK runner. */
+export const DESCOPE_FLOW_ID = process.env.NEXT_PUBLIC_DESCOPE_FLOW_ID?.trim() ?? "";
+
 /** Where a successful login should land the user. */
-export const POST_LOGIN_PATH = "/auth/settings";
+export const POST_LOGIN_PATH = "/me";
 
 /** Where an unauthenticated user is sent to sign in. */
-export const LOGIN_PATH = "/login-native";
+export const LOGIN_PATH = "/auth/login";
+
+/** Restrict post-authentication navigation to a path on this application. */
+export function safeReturnPath(value: string | null | undefined) {
+  if (!value?.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return POST_LOGIN_PATH;
+  }
+
+  try {
+    const base = new URL("https://app.invalid");
+    const url = new URL(value, base);
+
+    if (url.origin !== base.origin) return POST_LOGIN_PATH;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return POST_LOGIN_PATH;
+  }
+}
 
 /**
  * Descope's hosted login/flow page. Renders the project's flow UI on Descope's

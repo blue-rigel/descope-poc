@@ -6,18 +6,30 @@ import {
   DESCOPE_APP_ID,
   DESCOPE_BASE_URL,
   DESCOPE_PROJECT_ID,
-  oidcIssuer,
 } from "./descope-config";
-
-/** Descope's default session-token cookie name (matches proxy.ts). */
-const SESSION_COOKIE = "DS";
 
 /** Descope's default refresh-token cookie / localStorage key. */
 const REFRESH_KEY = "DSR";
+const OIDC_STORAGE_PREFIX = "oidc_";
 
 /** Current session JWT (from the `DS` cookie/storage), or "" if none. */
 export function getToken() {
   return getSessionToken();
+}
+
+/** Current OIDC application session token, isolated from native auth. */
+export function getOidcSessionToken() {
+  return (getDescopeOidc() as ReturnType<typeof createSdk<true>>).getSessionToken();
+}
+
+/** Current OIDC refresh token, isolated from native auth. */
+export function getOidcRefreshToken() {
+  return (getDescopeOidc() as ReturnType<typeof createSdk<true>>).getRefreshToken();
+}
+
+/** Current OIDC application ID token, or "" if none. */
+export function getOidcIdToken() {
+  return (getDescopeOidc() as ReturnType<typeof createSdk<true>>).getIdToken();
 }
 
 /**
@@ -39,22 +51,6 @@ export function getRefreshJwt() {
 }
 
 /**
- * Mirror the session token into the `DS` cookie the server-side proxy reads.
- * Needed after the OIDC flow, which otherwise only stores the token in
- * localStorage. `secure` is omitted over HTTP (local dev) so the browser keeps it.
- */
-export function persistSessionCookie(token: string) {
-  if (!token) return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${SESSION_COOKIE}=${token}; path=/; SameSite=Lax${secure}`;
-}
-
-/** Expire the `DS` cookie so the proxy immediately sees the user as logged out. */
-export function clearSessionCookie() {
-  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
-}
-
-/**
  * Browser Descope SDK singleton.
  *
  * - `persistTokens` keeps tokens in browser storage and enables getSessionToken().
@@ -73,13 +69,15 @@ export function clearSessionCookie() {
  *   localStorage where getRefreshToken() can read it.
  */
 let sdk: ReturnType<typeof createSdk> | undefined;
+let oidcSdk: ReturnType<typeof createSdk> | undefined;
+let initialSessionRefresh: Promise<boolean> | undefined;
 
 export function getDescope() {
   if (!sdk) {
     sdk = createSdk({
       projectId: DESCOPE_PROJECT_ID,
       baseUrl: DESCOPE_BASE_URL,
-      persistTokens: true,
+      persistTokens: true as const,
       // Write the session token to the `DS` cookie so the server-side proxy can
       // validate it. `secure` must be false over plain HTTP (local dev) or the
       // browser silently drops the cookie and every session check fails.
@@ -87,18 +85,111 @@ export function getDescope() {
         secure: process.env.NODE_ENV !== "development",
       },
       autoRefresh: true,
-      // Enables sdk.oidc.* (hosted login via OIDC redirect). Issuer is the
-      // project's OIDC endpoint; clientId defaults to the project ID.
+    });
+  }
+  return sdk;
+}
+
+/** OIDC-specific SDK used only by the hosted SSO flow. */
+export function getDescopeOidc() {
+  if (!oidcSdk) {
+    oidcSdk = createSdk({
+      projectId: DESCOPE_PROJECT_ID,
+      baseUrl: DESCOPE_BASE_URL,
+      persistTokens: true as const,
+      storagePrefix: OIDC_STORAGE_PREFIX,
+      autoRefresh: true,
       oidcConfig: {
         // Descope Inbound (OIDC) Application ID drives the hosted-login flow.
         // For this inbound app the app ID is ALSO the OIDC client_id — using the
         // long CLIENT_ID value here breaks the login-page redirect.
-        applicationId: DESCOPE_APP_ID || DESCOPE_PROJECT_ID,
-        clientId: DESCOPE_APP_ID || DESCOPE_PROJECT_ID,
-        issuer: oidcIssuer(),
-        scope: "openid profile email",
+        applicationId: DESCOPE_APP_ID,
+        // clientId: DESCOPE_PROJECT_ID,
+        // issuer: oidcIssuer(),
+        scope: "openid profile email offline_access",
       },
+      // oidcConfig: true
     });
   }
-  return sdk;
+
+  return oidcSdk;
+}
+
+/** Clear this application's local session without ending the shared OIDC SSO session. */
+export async function logoutOidcApplicationSession() {
+  const idToken = getOidcIdToken();
+
+  // Build the sign-out request only. The SDK clears its OIDC state, tokens,
+  // notifications, and refresh timers, but does not visit the end-session URL
+  // or revoke the shared Descope session.
+  await getDescopeOidc().oidc.logout(
+    idToken ? { id_token_hint: idToken } : undefined,
+    true,
+  );
+}
+
+/** Refresh the isolated OIDC application session. */
+export async function forceRefreshOidcSession() {
+  const descope = getDescopeOidc();
+  const refreshToken = getOidcRefreshToken();
+
+  if (!refreshToken) {
+    throw new Error("No OIDC refresh token is available");
+  }
+
+  const result = await descope.refresh(refreshToken);
+  const sessionToken = getOidcSessionToken();
+
+  if (!result.ok || !sessionToken || descope.isJwtExpired(sessionToken)) {
+    throw new Error(
+      result.error?.errorMessage ||
+      result.error?.errorDescription ||
+      "Could not refresh OIDC session",
+    );
+  }
+
+  return sessionToken;
+}
+
+/** Refresh immediately, bypassing the one-time initialization promise. */
+export async function forceRefreshSession() {
+  const result = await getDescope().refresh();
+  const sessionJwt = result.data?.sessionJwt || getToken();
+
+  if (!result.ok || !sessionJwt) {
+    throw new Error(
+      result.error?.errorMessage ||
+      result.error?.errorDescription ||
+      "Could not refresh session",
+    );
+  }
+
+  return sessionJwt;
+}
+
+/** Restore or refresh the browser session through the Descope SDK. */
+export function initializeSessionRefresh() {
+  const descope = getDescope();
+
+  if (!initialSessionRefresh) {
+    initialSessionRefresh = (async () => {
+      const currentToken = getToken();
+
+      // Reuse a valid session token. Only restore from DSR when the access token
+      // is absent or expired.
+      if (currentToken && !descope.isJwtExpired(currentToken)) {
+        return true;
+      }
+
+      try {
+        await forceRefreshSession();
+      } catch {
+        return false;
+      }
+
+      return true;
+    })().catch(() => false);
+  }
+
+  return initialSessionRefresh;
 }

@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,54 +12,90 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getDescope } from "@/lib/descope-client";
-import { POST_LOGIN_PATH } from "@/lib/descope-config";
+import { getDescope, getDescopeOidc } from "@/lib/descope-client";
 
 type Mode = "signin" | "signup";
+
+function findErrorDescription(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return;
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record.errorDescription === "string" &&
+    record.errorDescription
+  ) {
+    return record.errorDescription;
+  }
+
+  for (const key of ["error", "data", "body", "cause"] as const) {
+    if (key in record) {
+      const description = findErrorDescription(record[key]);
+      if (description) return description;
+    }
+  }
+}
+
+async function getErrorDescription(value: unknown, response?: Response) {
+  const description = findErrorDescription(value);
+  if (description) return description;
+
+  try {
+    const body: unknown = await response?.clone().json();
+    const responseDescription = findErrorDescription(body);
+    if (responseDescription) return responseDescription;
+  } catch {
+    // Keep the generic fallback for missing or non-JSON response bodies.
+  }
+
+  return value instanceof Error ? value.message : "Authentication failed";
+}
 
 /**
  * Flow 2 — Email/Password Login (Native).
  * Custom in-app form driven directly by the web-js SDK (no hosted redirect).
- * On success the SDK sets the `DS` session cookie and we route to the profile.
+ * On success the SDK sets the `DS` session cookie and completes any pending
+ * OIDC login without navigating away from this route.
  */
 export default function NativeLoginPage() {
-  return (
-    <Suspense>
-      <NativeLoginForm />
-    </Suspense>
-  );
+  return <NativeLoginForm />;
 }
 
 function NativeLoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const dest = searchParams.get("from") ?? POST_LOGIN_PATH;
-
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setLoading(true);
     setError(null);
     try {
-      const sdk = getDescope();
+      const sdk = getDescopeOidc();
       const res =
         mode === "signin"
           ? await sdk.password.signIn(email, password)
           : await sdk.password.signUp(email, password);
 
       if (!res.ok) {
-        setError(res.error?.errorMessage ?? "Authentication failed");
+        setError(await getErrorDescription(res.error, res.response));
         return;
       }
-      router.push(dest);
-      router.refresh();
+
+      const auth = res.data;
+      if (!auth) {
+        setError("Authentication succeeded without session information");
+        return;
+      }
+
+
+
+      const response = await getDescopeOidc().oidc.finishLoginIfNeed();
+      console.log(response)
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error");
+      console.log(error)
+      setError(await getErrorDescription(err));
     } finally {
       setLoading(false);
     }
@@ -79,7 +114,7 @@ function NativeLoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={submit} className="space-y-3">
+          <form action={submit} className="space-y-3">
             <Input
               type="email"
               placeholder="you@example.com"

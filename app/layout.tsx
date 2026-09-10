@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,9 +26,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <header>
-          <Link href="/" className="p-4 inline-block">
+        <header className="flex items-center justify-between px-4 py-3">
+          <Link href="/" className="font-medium">
             IDPF Test App / Home
+          </Link>
+          <Link
+            href="/me"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            My Profile
           </Link>
         </header>
         {children}
