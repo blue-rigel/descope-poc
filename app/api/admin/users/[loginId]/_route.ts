@@ -107,3 +107,5 @@ export async function DELETE(_request: NextRequest, ctx: Ctx) {
     );
   }
 }
+
+export const dynamic = 'force-dynamic'

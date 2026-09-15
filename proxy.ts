@@ -19,13 +19,21 @@ const AUTH_ONLY = ["/auth/login", "/login-native", "/login-otp"];
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hasPendingOidcAuthorization =
+    pathname.startsWith("/auth/login") &&
+    request.nextUrl.searchParams.has("sso_app_id") &&
+    request.nextUrl.searchParams.has("state_id");
 
   const sessionJwt = request.cookies.get(SESSION_COOKIE)?.value;
   const session = await validateDescopeSession(sessionJwt);
   const isAuthed = Boolean(session);
 
   // Logged-in users shouldn't sit on the native login page.
-  if (isAuthed && AUTH_ONLY.some((p) => pathname.startsWith(p))) {
+  if (
+    isAuthed &&
+    !hasPendingOidcAuthorization &&
+    AUTH_ONLY.some((p) => pathname.startsWith(p))
+  ) {
     return NextResponse.redirect(new URL(POST_LOGIN_PATH, request.url));
   }
 
@@ -48,8 +56,8 @@ export const config = {
     "/auth/settings/:path*",
     "/sessions/:path*",
     "/sensitive/:path*",
-    "/auth/login/:path*",
-    "/login-native/:path*",
-    "/login-otp/:path*",
+    // "/auth/login/:path*",
+    // "/login-native/:path*",
+    // "/login-otp/:path*",
   ],
 };

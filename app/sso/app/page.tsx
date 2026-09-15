@@ -23,6 +23,13 @@ import { absoluteUrl } from "@/lib/descope-config";
 
 const SSO_CALLBACK_PATH = "/sso/callback";
 const SILENT_CALLBACK_PATH = "/silent-callback.html";
+const SILENT_AUTH_TIMEOUT_MS = 15_000;
+const SILENT_AUTH_INTERACTION_ERRORS = new Set([
+  "login_required",
+  "interaction_required",
+  "consent_required",
+  "account_selection_required",
+]);
 
 function decodeJwtPayload(token: string) {
   try {
@@ -112,8 +119,10 @@ export default function SsoDemoPage() {
 
     const iframe = document.createElement("iframe");
     iframe.hidden = true;
+    let timeoutId: number | undefined;
 
     const cleanup = () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       window.removeEventListener("message", handleMessage);
       iframe.remove();
     };
@@ -126,20 +135,27 @@ export default function SsoDemoPage() {
       const response = event.data.response as
         | { code?: string; error?: string; state?: string }
         | undefined;
-      if (!response?.state) return;
+      if (!response) return;
 
-      cleanup();
-
-      if (response.error === "login_required") {
-        await login();
-        return;
-      }
-
-      if (response.error || !response.code) {
-        setError(response.error || "Silent authentication returned no code");
+      if (response.error) {
+        cleanup();
+        if (SILENT_AUTH_INTERACTION_ERRORS.has(response.error)) {
+          await login();
+          return;
+        }
+        setError(response.error);
         setBusy(false);
         return;
       }
+
+      if (!response.code || !response.state) {
+        cleanup();
+        setError("Silent authentication returned an incomplete response");
+        setBusy(false);
+        return;
+      }
+
+      cleanup();
 
       try {
         const callbackUrl = new URL(absoluteUrl(SILENT_CALLBACK_PATH));
@@ -187,6 +203,11 @@ export default function SsoDemoPage() {
       window.addEventListener("message", handleMessage);
       iframe.src = authorizeUrl;
       document.body.appendChild(iframe);
+      timeoutId = window.setTimeout(() => {
+        cleanup();
+        setError("Silent authentication timed out. Sign in with SSO instead.");
+        setBusy(false);
+      }, SILENT_AUTH_TIMEOUT_MS);
     } catch (err) {
       cleanup();
       setError(

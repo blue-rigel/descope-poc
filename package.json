@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS=--use-system-ca next dev -p 3001",
+    "dev": "NODE_OPTIONS=--use-system-ca next dev -p 3000",
     "build": "NODE_OPTIONS=--use-system-ca next build",
     "start": "NODE_OPTIONS=--use-system-ca next start",
     "lint": "eslint"

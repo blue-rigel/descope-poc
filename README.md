@@ -19,7 +19,9 @@ The `/auth/login` route recognizes this explicit Flow contract:
 
 | Screen name | Interaction IDs | Inputs |
 | --- | --- | --- |
-| `Welcome Screen` | `ygSMAX5_SA`, `gSxXWXi6pr` | `email`, or `provider: google` |
+| `Welcome Screen` | `continue-with-password` | `email`, `password` |
+| `Welcome Screen` | `continue-with-email` | `email` |
+| `Welcome Screen` | `gSxXWXi6pr` | `provider: google` |
 | `Magic Link Sent` | `resend`, `EbW8KMdjAx` | `email` for resend |
 
 Use these exact, unique names in the Flow Builder or update the constants in
