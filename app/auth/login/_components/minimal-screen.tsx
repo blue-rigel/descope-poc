@@ -1,4 +1,5 @@
 import { ArrowRight, Mail } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,11 +32,14 @@ export function MinimalScreen({
   uiOption,
   onUiOptionChange,
   onPasswordSubmit,
+  onSignUpSubmit,
   onEmailAction,
   onGoogleAction,
   onResend,
   onBack,
 }: ScreenProps) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+
   return (
     <>
       <UiPicker value={uiOption} onChange={onUiOptionChange} />
@@ -45,17 +49,17 @@ export function MinimalScreen({
             ID
           </div>
           <CardTitle className="text-2xl tracking-tight">
-            {screenName === SCREEN_MAGIC_LINK_SENT ? "Check your email" : "Sign in"}
+            {screenName === SCREEN_MAGIC_LINK_SENT ? "Check your email" : mode === "signin" ? "Sign in" : "Create account"}
           </CardTitle>
           <CardDescription className="mt-2 leading-5">
             {screenName === SCREEN_MAGIC_LINK_SENT
               ? `We sent a sign-in link to ${sentTo}.`
-              : "Continue to your IDPF account."}
+              : mode === "signin" ? "Continue to your IDPF account." : "Sign up for your IDPF account."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-6 pb-7 pt-5" aria-busy={submitting}>
           {screenName === SCREEN_WELCOME ? (
-            <form className="space-y-4" onSubmit={onPasswordSubmit}>
+            <form className="space-y-4" onSubmit={mode === "signin" ? onPasswordSubmit : onSignUpSubmit}>
               <div className="space-y-2">
                 <label htmlFor="minimal-email" className="text-sm font-medium">Email</label>
                 <div className="relative">
@@ -65,15 +69,32 @@ export function MinimalScreen({
               </div>
               <div className="space-y-2">
                 <label htmlFor="minimal-password" className="text-sm font-medium">Password</label>
-                <Input id="minimal-password" name="password" type="password" value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Password" autoComplete="current-password" required disabled={submitting} aria-invalid={Boolean(error)} className="h-11" />
+                <Input id="minimal-password" name="password" type="password" value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Password" autoComplete={mode === "signin" ? "current-password" : "new-password"} required disabled={submitting} aria-invalid={Boolean(error)} className="h-11" />
               </div>
               <Button type="submit" className="group h-11 w-full justify-between px-4" disabled={submitting}>
-                Continue with password
+                {mode === "signin" ? "Continue with password" : "Create account"}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
-              <EmailButton onSend={onEmailAction} disabled={submitting} />
-              <div className="relative py-1 text-center text-xs text-muted-foreground before:absolute before:inset-x-0 before:top-1/2 before:border-t"><span className="relative bg-card px-3">or</span></div>
-              <GoogleButton onClick={onGoogleAction} disabled={submitting} />
+              {mode === "signin" && (
+                <>
+                  <EmailButton onSend={onEmailAction} disabled={submitting} />
+                  <div className="relative py-1 text-center text-xs text-muted-foreground before:absolute before:inset-x-0 before:top-1/2 before:border-t"><span className="relative bg-card px-3">or</span></div>
+                  <GoogleButton onClick={onGoogleAction} disabled={submitting} />
+                </>
+              )}
+              <p className="text-center text-sm text-muted-foreground">
+                {mode === "signin" ? "No account yet?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  className="text-foreground underline underline-offset-4"
+                  onClick={() => {
+                    setMode(mode === "signin" ? "signup" : "signin");
+                  }}
+                  disabled={submitting}
+                >
+                  {mode === "signin" ? "Create one" : "Sign in"}
+                </button>
+              </p>
             </form>
           ) : (
             <div className="space-y-4">

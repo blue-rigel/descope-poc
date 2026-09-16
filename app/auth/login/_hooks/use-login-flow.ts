@@ -23,6 +23,7 @@ import {
   ACTION_PASSWORD,
   ACTION_POLLING,
   ACTION_RESEND,
+  ACTION_SIGN_UP_EMAILPASSWORD,
   RESEND_COOLDOWN_SECONDS,
   SCREEN_MAGIC_LINK_SENT,
   UI_OPTIONS,
@@ -249,7 +250,7 @@ export function useLoginFlow(mountRef: RefObject<HTMLDivElement | null>) {
   }
 
   function submitCredentials(
-    action: typeof ACTION_EMAIL | typeof ACTION_PASSWORD,
+    action: typeof ACTION_EMAIL | typeof ACTION_PASSWORD | typeof ACTION_SIGN_UP_EMAILPASSWORD,
   ) {
     const normalized = email.trim();
     if (!normalized || !normalized.includes("@")) {
@@ -257,7 +258,7 @@ export function useLoginFlow(mountRef: RefObject<HTMLDivElement | null>) {
       return;
     }
 
-    if (action === ACTION_PASSWORD && !password) {
+    if ((action === ACTION_PASSWORD || action === ACTION_SIGN_UP_EMAILPASSWORD) && !password) {
       setLocalError("Enter your password");
       return;
     }
@@ -265,7 +266,7 @@ export function useLoginFlow(mountRef: RefObject<HTMLDivElement | null>) {
     setEmail(normalized);
     void performAction(
       action,
-      action === ACTION_PASSWORD
+      action === ACTION_PASSWORD || action === ACTION_SIGN_UP_EMAILPASSWORD
         ? { email: normalized, password }
         : { email: normalized },
     );
@@ -274,6 +275,11 @@ export function useLoginFlow(mountRef: RefObject<HTMLDivElement | null>) {
   function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     submitCredentials(ACTION_PASSWORD);
+  }
+
+  function submitSignUp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    submitCredentials(ACTION_SIGN_UP_EMAILPASSWORD);
   }
 
   function submitEmail() {
@@ -319,6 +325,7 @@ export function useLoginFlow(mountRef: RefObject<HTMLDivElement | null>) {
     selectUiOption,
     sentTo,
     submitPassword,
+    submitSignUp,
     submitEmail,
     submitGoogle,
     resend,

@@ -11,6 +11,7 @@ export const SCREEN_MAGIC_LINK_SENT = "magic-link-sent";
  */
 export const ACTION_EMAIL = "continue-with-email";
 export const ACTION_PASSWORD = "continue-with-password";
+export const ACTION_SIGN_UP_EMAILPASSWORD = "sign-up-emailpassword";
 export const ACTION_GOOGLE = "continue-with-google";
 export const ACTION_RESEND = "resend";
 export const ACTION_BACK = "EbW8KMdjAx";

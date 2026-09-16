@@ -42,6 +42,7 @@ export type ScreenProps = {
   uiOption: UiOption;
   onUiOptionChange: (option: UiOption) => void;
   onPasswordSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSignUpSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onEmailAction: () => void;
   onGoogleAction: () => void;
   onResend: () => void;

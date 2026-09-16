@@ -26,6 +26,7 @@ export default function ByosLoginPage() {
       uiOption={flow.uiOption}
       onUiOptionChange={flow.selectUiOption}
       onPasswordSubmit={flow.submitPassword}
+      onSignUpSubmit={flow.submitSignUp}
       onEmailAction={flow.submitEmail}
       onGoogleAction={flow.submitGoogle}
       onResend={flow.resend}

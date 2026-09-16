@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -22,29 +23,49 @@ export function EditorialScreen({
   uiOption,
   onUiOptionChange,
   onPasswordSubmit,
+  onSignUpSubmit,
   onEmailAction,
   onGoogleAction,
   onResend,
   onBack,
 }: ScreenProps) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+
   return (
     <div className="mx-auto w-full max-w-sm">
       <UiPicker value={uiOption} onChange={onUiOptionChange} />
       <div className="border-y border-stone-300 bg-[#fffdf8] px-2 py-8 text-stone-900 dark:border-stone-700">
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a04434]">IDPF Journal</p>
-        <h1 className="mt-5 font-serif text-4xl leading-none tracking-tight">{screenName === SCREEN_MAGIC_LINK_SENT ? "Check your inbox." : "Welcome back."}</h1>
-        <p className="mt-3 text-sm leading-6 text-stone-600">{screenName === SCREEN_MAGIC_LINK_SENT ? `We sent a sign-in link to ${sentTo}.` : "Sign in to continue reading."}</p>
+        <h1 className="mt-5 font-serif text-4xl leading-none tracking-tight">{screenName === SCREEN_MAGIC_LINK_SENT ? "Check your inbox." : mode === "signin" ? "Welcome back." : "Join us."}</h1>
+        <p className="mt-3 text-sm leading-6 text-stone-600">{screenName === SCREEN_MAGIC_LINK_SENT ? `We sent a sign-in link to ${sentTo}.` : mode === "signin" ? "Sign in to continue reading." : "Create an account to start reading."}</p>
         <div className="mt-7 space-y-4">
           {screenName === SCREEN_WELCOME ? (
-            <form className="space-y-4" onSubmit={onPasswordSubmit}>
+            <form className="space-y-4" onSubmit={mode === "signin" ? onPasswordSubmit : onSignUpSubmit}>
               <label htmlFor="editorial-email" className="sr-only">Email</label>
               <Input id="editorial-email" type="email" value={email} onChange={(event) => onEmailChange(event.target.value)} placeholder="Email address" autoComplete="email" disabled={submitting} aria-invalid={Boolean(error)} className="h-11 rounded-none border-x-0 border-t-0 border-stone-400 bg-transparent px-0 text-stone-900 shadow-none focus-visible:ring-0" />
               <label htmlFor="editorial-password" className="sr-only">Password</label>
-              <Input id="editorial-password" name="password" type="password" value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Password" autoComplete="current-password" required disabled={submitting} aria-invalid={Boolean(error)} className="h-11 rounded-none border-x-0 border-t-0 border-stone-400 bg-transparent px-0 text-stone-900 shadow-none focus-visible:ring-0" />
-              <Button type="submit" className="h-10 w-full rounded-none bg-[#a04434] text-white hover:bg-[#843426]" disabled={submitting}>Continue with password</Button>
-              <EmailButton onSend={onEmailAction} disabled={submitting} />
-              <div className="text-center font-serif text-sm italic text-stone-500">or</div>
-              <GoogleButton onClick={onGoogleAction} disabled={submitting} />
+              <Input id="editorial-password" name="password" type="password" value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Password" autoComplete={mode === "signin" ? "current-password" : "new-password"} required disabled={submitting} aria-invalid={Boolean(error)} className="h-11 rounded-none border-x-0 border-t-0 border-stone-400 bg-transparent px-0 text-stone-900 shadow-none focus-visible:ring-0" />
+              <Button type="submit" className="h-10 w-full rounded-none bg-[#a04434] text-white hover:bg-[#843426]" disabled={submitting}>{mode === "signin" ? "Continue with password" : "Create account"}</Button>
+              {mode === "signin" && (
+                <>
+                  <EmailButton onSend={onEmailAction} disabled={submitting} />
+                  <div className="text-center font-serif text-sm italic text-stone-500">or</div>
+                  <GoogleButton onClick={onGoogleAction} disabled={submitting} />
+                </>
+              )}
+              <p className="text-center text-sm text-stone-600">
+                {mode === "signin" ? "No account yet?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  className="text-[#a04434] underline underline-offset-4"
+                  onClick={() => {
+                    setMode(mode === "signin" ? "signup" : "signin");
+                  }}
+                  disabled={submitting}
+                >
+                  {mode === "signin" ? "Create one" : "Sign in"}
+                </button>
+              </p>
             </form>
           ) : (
             <div className="space-y-4">
