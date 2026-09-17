@@ -189,7 +189,6 @@ export function useLoginFlow(mountRef: RefObject<HTMLDivElement | null>) {
       element.setAttribute("project-id", DESCOPE_PROJECT_ID);
       element.setAttribute("flow-id", DESCOPE_FLOW_ID);
       element.setAttribute("redirect-url", window.location.href);
-      element.setAttribute("base-url", "https://auth.mysph.ayaypaw.app")
       if (DESCOPE_BASE_URL) element.setAttribute("base-url", DESCOPE_BASE_URL);
 
       element.onScreenUpdate = (name, context, next, host) =>
