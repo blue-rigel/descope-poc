@@ -8,6 +8,9 @@
  * passes device context as query params, and expects the finished session to be
  * handed back as an OAuth authorization `code` on its own deep link.
  *
+ * The apps themselves run no authentication flow — every screen the user sees
+ * is this web interface, rendered inside their webview.
+ *
  * This module owns the three things that must survive the redirect hops:
  * the publisher `ClientConfig`, the captured `MobileParameters`, and the
  * "redirect in flight" flag.
@@ -47,6 +50,7 @@ export const STATIC_BASE_URL =
 
 export const NATIVE_LOGIN_PATH = "/native/login";
 export const NATIVE_HANDOFF_PATH = "/native/handoff";
+export const NATIVE_CALLBACK_PATH = "/native/callback";
 
 export function isNativePlatform(platform: Platform | undefined) {
   return platform === "ios" || platform === "android";

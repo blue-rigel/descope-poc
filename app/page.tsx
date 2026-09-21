@@ -102,7 +102,7 @@ export default function Home() {
                 <div>
                   <div className="font-medium">Native Webview Host</div>
                   <div className="text-sm text-muted-foreground">
-                    iOS/Android launch → flow → deep-link code hand-off
+                    Web login form in a webview → deep-link code hand-off
                   </div>
                 </div>
               </Link>

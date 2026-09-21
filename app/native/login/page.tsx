@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LOGIN_PATH } from "@/lib/descope-config";
+import { getDescope } from "@/lib/descope-client";
 import {
   captureMobileParameters,
   clearHandoff,
@@ -19,7 +19,9 @@ import {
   NATIVE_HANDOFF_PATH,
   resolveClientConfig,
 } from "@/lib/native-config";
-import { prepareNativeLaunch, storeNativePkce } from "@/lib/native-handoff";
+import { prepareNativeLaunch, storeAppLaunchParams } from "@/lib/native-handoff";
+
+import { NativeLoginForm } from "./_components/native-login-form";
 
 /**
  * Native webview host (the counterpart of the legacy `mysph-standalone`
@@ -27,20 +29,21 @@ import { prepareNativeLaunch, storeNativePkce } from "@/lib/native-handoff";
  *
  * A native app opens:
  *   /native/login?pubId=st&platform=ios&redirectUrl=myapp://auth
- *                &deviceId=…&osVersion=…&appVersion=…
- *                &codeChallenge=…&codeChallengeMethod=S256&state=…
+ *                &deviceId=…&osVersion=…&appVersion=…&state=…
  *
- * This page renders no auth UI of its own: it resolves the publisher config,
- * captures the device context, clears any stale session, and then hands over to
- * the existing BYOS flow with `/native/handoff` as its return path.
+ * The app has no authentication screens of its own, so this page renders the
+ * login form itself. Once the user is authenticated it moves on to
+ * `/native/handoff`, which mints the code the app exchanges.
  */
 
 /** The bootstrap must run once per page load, not twice under Strict Mode. */
 let bootstrapStarted = false;
 
+type Status = "loading" | "ready" | "inflight" | "error";
+
 export default function NativeLoginPage() {
+  const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
-  const [inFlight, setInFlight] = useState(false);
 
   useEffect(() => {
     if (bootstrapStarted) return;
@@ -49,61 +52,87 @@ export default function NativeLoginPage() {
     // Redirect-in-flight guard: the hand-off is already navigating this webview
     // away. Re-running the flow here would fight it, so render nothing.
     if (isHandoffInFlight()) {
-      setInFlight(true);
+      setStatus("inflight");
       return;
     }
 
     (async () => {
       try {
         const params = new URL(window.location.href).searchParams;
+        // Social sign-in comes back here as a full-page redirect; that leg must
+        // not be mistaken for a fresh launch and wipe the session it just made.
+        const socialCode = params.get("code");
         const config = await resolveClientConfig(params);
-        captureMobileParameters(params, config);
-        storeNativePkce(params);
-        clearHandoff();
 
-        if (isNativePlatform(config.platform)) {
-          // A session left over from a previous run interferes with the new
-          // one — start from a clean slate before launching the flow.
-          await prepareNativeLaunch();
+        if (!socialCode) {
+          captureMobileParameters(params, config);
+          storeAppLaunchParams(params);
+          clearHandoff();
+
+          if (isNativePlatform(config.platform)) {
+            // A session left behind by a previous run would authorize the wrong
+            // user — start from a clean slate before showing the form.
+            await prepareNativeLaunch();
+          }
+
+          setStatus("ready");
+          return;
         }
 
-        const target = new URL(LOGIN_PATH, window.location.origin);
-        target.searchParams.set("from", NATIVE_HANDOFF_PATH);
-        const ui = params.get("ui");
-        if (ui) target.searchParams.set("ui", ui);
-        window.location.replace(target.toString());
+        const exchanged = await getDescope().oauth.exchange(socialCode);
+        if (!exchanged.ok) {
+          setError(
+            exchanged.error?.errorMessage ?? "Could not complete social sign-in",
+          );
+          setStatus("error");
+          return;
+        }
+
+        window.location.replace(NATIVE_HANDOFF_PATH);
       } catch (cause) {
         bootstrapStarted = false;
         setError(
           cause instanceof Error ? cause.message : "Could not start the login flow",
         );
+        setStatus("error");
       }
     })();
   }, []);
 
-  if (inFlight) return null;
+  if (status === "inflight") return null;
 
   return (
-    <section className="flex justify-center">
-      <Card className="w-full max-w-md mt-16">
+    <section className="flex justify-center px-4">
+      <Card className="w-full max-w-md mt-12">
         <CardHeader className="text-center">
           <Smartphone className="mx-auto h-8 w-8 text-emerald-600" />
           <CardTitle className="mt-2">
-            {error ? "Cannot start sign-in" : "Starting sign-in…"}
+            {status === "error" ? "Cannot start sign-in" : "Sign in"}
           </CardTitle>
           <CardDescription>
-            {error ?? "Preparing the in-app authentication flow."}
+            {status === "error"
+              ? error
+              : status === "ready"
+                ? "Use your account to continue in the app."
+                : "Preparing the sign-in form…"}
           </CardDescription>
         </CardHeader>
-        {error && (
-          <CardContent>
+        <CardContent>
+          {status === "ready" && (
+            <NativeLoginForm
+              onAuthenticated={() =>
+                window.location.replace(NATIVE_HANDOFF_PATH)
+              }
+            />
+          )}
+          {status === "error" && (
             <p className="text-sm text-muted-foreground">
               Open this page with <code>pubId</code> plus either a hosted client
               config or <code>platform</code> and <code>redirectUrl</code> query
               parameters.
             </p>
-          </CardContent>
-        )}
+          )}
+        </CardContent>
       </Card>
     </section>
   );
