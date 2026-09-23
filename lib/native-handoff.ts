@@ -3,8 +3,10 @@
 import { getDescope } from "@/lib/descope-client";
 import {
   DESCOPE_APP_ID,
-  DESCOPE_BASE_URL,
   DESCOPE_CLIENT_ID,
+  DESCOPE_IDP_BASE_URL,
+  MAGW_MOBILE_APP_ID,
+  MAGW_MOBILE_CLIENT_ID,
   absoluteUrl,
 } from "@/lib/descope-config";
 import {
@@ -19,13 +21,14 @@ import {
  * The iOS / Android apps run **no authentication flow of their own** — they open
  * this web interface in a webview and wait for the result. So the webview does
  * all of the OAuth work: it authenticates the user with the login form, mints an
- * authorization code for the app's client, and deep-links back with the code
- * *and* the PKCE verifier it generated. The app's only job is one token call.
+ * authorization code for the Federated App client (MAGW_Mobile_App), and
+ * deep-links back with the code *and* the PKCE verifier it generated. The app's
+ * only job is one token call.
  *
  *   /native/login   web login form (password / email OTP / social)
  *   /native/handoff authorize with webview-generated PKCE
  *   /native/callback code lands here → deep link: ?code=…&code_verifier=…
- *   app             POST {apiBase}/oauth2/v1/apps/token → its own tokens
+ *   app             POST {idpBase}/{appId}/oauth2/v1/token → its own tokens
  *
  * Note the trade-off this shape accepts: shipping the verifier next to the code
  * means PKCE no longer binds the exchange to the requesting client — it is a
@@ -34,8 +37,14 @@ import {
  * Links) rather than a plain custom scheme any app can register.
  */
 
-/** Descope Inbound (OIDC) Application authorization endpoint. */
-const AUTHORIZE_PATH = "/oauth2/v1/apps/authorize";
+/**
+ * Federated OIDC App authorization endpoint from MAGW_Mobile_App discovery:
+ * `{idpBase}/{ssoAppId}/oauth2/v1/authorize`
+ */
+function authorizePath(appId = MAGW_MOBILE_APP_ID) {
+  return `/${appId}/oauth2/v1/authorize`;
+}
+
 const PKCE_KEY = "mysph-webview-pkce";
 const SILENT_KEY = "mysph-native-silent-authorize";
 const LAUNCH_KEY = "mysph-app-launch-params";
@@ -106,14 +115,18 @@ function readWebviewPkce(): WebviewPkce | null {
 }
 
 function apiBaseUrl() {
-  return DESCOPE_BASE_URL?.replace(/\/$/, "") ?? "https://api.descope.com";
+  return DESCOPE_IDP_BASE_URL;
 }
 
 function resolveClientId(config: ClientConfig) {
-  const clientId = config.clientId || DESCOPE_APP_ID || DESCOPE_CLIENT_ID;
+  const clientId =
+    config.clientId ||
+    DESCOPE_CLIENT_ID ||
+    DESCOPE_APP_ID ||
+    MAGW_MOBILE_CLIENT_ID;
   if (!clientId) {
     throw new Error(
-      "No inbound-app client id: set NEXT_PUBLIC_APP_ID or clientId in the client config",
+      "No Federated App client id: set NEXT_PUBLIC_CLIENT_ID or clientId in the client config",
     );
   }
   return clientId;
@@ -169,8 +182,10 @@ export async function buildAuthorizeUrl(
   const pkce: WebviewPkce = { verifier, state };
   window.sessionStorage.setItem(PKCE_KEY, JSON.stringify(pkce));
 
-  const url = new URL(`${apiBaseUrl()}${AUTHORIZE_PATH}`);
+  const url = new URL(`${apiBaseUrl()}${authorizePath()}`);
   url.searchParams.set("client_id", resolveClientId(config));
+  // Code lands on this webview first so we can attach the PKCE verifier before
+  // forwarding to the app's redirectUrl (e.g. /native/auth-code for testing).
   url.searchParams.set("redirect_uri", absoluteUrl(NATIVE_CALLBACK_PATH));
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", launch.scope || DEFAULT_SCOPE);
@@ -238,7 +253,7 @@ export function buildDeepLinkUrl(config: ClientConfig, params: URLSearchParams) 
 
 /**
  * Final hop: leave the webview for the app, which exchanges the code at
- * `{apiBase}/oauth2/v1/apps/token` using the verifier we just handed it.
+ * `{idpBase}/{appId}/oauth2/v1/token` using the verifier we just handed it.
  */
 export function handOffToNativeApp(config: ClientConfig, params: URLSearchParams) {
   const deepLink = buildDeepLinkUrl(config, params);
