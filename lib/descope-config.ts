@@ -21,12 +21,30 @@ export const DESCOPE_APP_ID = process.env.NEXT_PUBLIC_APP_ID ?? "";
  * read (browser Authorization-Code + PKCE flow does not use it).
  */
 export const DESCOPE_CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID ?? "";
+
+/**
+ * Federated OIDC App "MAGW_Mobile_App" (linked to the `mobile-login` flow).
+ * Used by the native webview hand-off to mint an authorization code.
+ * Override with NEXT_PUBLIC_APP_ID / NEXT_PUBLIC_CLIENT_ID when needed.
+ */
+export const MAGW_MOBILE_APP_ID = "SA3JdQGSM23OyI28qTnLGRTZAk8MR";
+export const MAGW_MOBILE_CLIENT_ID =
+  "UDNIcWZDcWhPQUxTMHJMRlBjSUY0aW5DSUZWSDpTQTNKZFFHU00yM095STI4cVRuTEdSVFpBazhNUiMj";
+
 /**
  * Optional custom base URL (e.g. a CNAME'd auth domain). Falls back to Descope's
  * shared hosted domain. Override with NEXT_PUBLIC_DESCOPE_BASE_URL if needed.
  */
 export const DESCOPE_BASE_URL =
   process.env.NEXT_PUBLIC_DESCOPE_BASE_URL ?? undefined;
+
+/**
+ * IdP base used for Federated App OIDC authorize/token. Prefer the custom
+ * domain from MAGW discovery when NEXT_PUBLIC_DESCOPE_BASE_URL is unset.
+ */
+export const DESCOPE_IDP_BASE_URL =
+  DESCOPE_BASE_URL?.replace(/\/$/, "") ??
+  "https://descope.dev.idp.sph.com.sg";
 
 /** Flow executed by the custom web-js SDK runner. */
 export const DESCOPE_FLOW_ID = process.env.NEXT_PUBLIC_DESCOPE_FLOW_ID?.trim() ?? "";
@@ -77,9 +95,7 @@ export function hostedLoginUrl(redirectUrl: string, flowId = "sign-up-or-in") {
  * ID. Used by sdk.oidc.loginWithRedirect / finishLoginIfNeed.
  */
 export function oidcIssuer() {
-  const apiBase =
-    DESCOPE_BASE_URL?.replace(/\/$/, "") ?? "https://api.descope.com";
-  return `${apiBase}/${DESCOPE_PROJECT_ID}`;
+  return `${DESCOPE_IDP_BASE_URL}/${DESCOPE_PROJECT_ID}`;
 }
 
 /** Build an absolute URL for `path` on the current origin (browser only). */

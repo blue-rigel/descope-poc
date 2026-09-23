@@ -30,8 +30,13 @@ let authorizationStarted = false;
 
 export default function NativeHandoffPage() {
   const [error, setError] = useState<string | null>(null);
+  const [mobile, setMobile] = useState<ReturnType<typeof readMobileParameters>>(
+    null,
+  );
 
   useEffect(() => {
+    setMobile(readMobileParameters());
+
     if (authorizationStarted) return;
     authorizationStarted = true;
 
@@ -55,8 +60,6 @@ export default function NativeHandoffPage() {
       );
     });
   }, []);
-
-  const mobile = typeof window === "undefined" ? null : readMobileParameters();
 
   return (
     <section className="flex justify-center">

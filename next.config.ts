@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
+const isProductionBuild = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
-  /* config options here */
   allowedDevOrigins: ["descope-one.local"],
-  output: "export"
+  ...(isProductionBuild ? { output: "export" } : {}),
 };
 
 export default nextConfig;

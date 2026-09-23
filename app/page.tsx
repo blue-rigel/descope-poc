@@ -97,7 +97,7 @@ export default function Home() {
               variant="outline"
               className="h-14 justify-start gap-3 text-left bg-transparent"
             >
-              <Link href="/native/login?pubId=demo&platform=ios&redirectUrl=descopepoc%3A%2F%2Fauth%2Fcallback">
+              <Link href="/native/login?pubId=demo&platform=ios&redirectUrl=http%3A%2F%2Flocalhost%3A3000%2Fnative%2Fauth-code">
                 <TabletSmartphone className="h-5 w-5 text-emerald-600" />
                 <div>
                   <div className="font-medium">Native Webview Host</div>
