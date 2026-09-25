@@ -7,7 +7,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Globe, KeyRound, Lock, Mail, Monitor, Network, ShieldCheck, Smartphone, Trash2, UserRound, Users } from "lucide-react";
+import { Globe, KeyRound, Lock, Mail, Monitor, Network, ShieldCheck, Smartphone, TabletSmartphone, Trash2, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -87,6 +87,22 @@ export default function Home() {
                   <div className="font-medium">Email/Password Login (Native)</div>
                   <div className="text-sm text-muted-foreground">
                     Direct API flow, token-based session
+                  </div>
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-14 justify-start gap-3 text-left bg-transparent"
+            >
+              <Link href="/native/login?pubId=demo&platform=ios&redirectUrl=descopepoc%3A%2F%2Fauth%2Fcallback">
+                <TabletSmartphone className="h-5 w-5 text-emerald-600" />
+                <div>
+                  <div className="font-medium">Native Webview Host</div>
+                  <div className="text-sm text-muted-foreground">
+                    Web login form in a webview → deep-link code hand-off
                   </div>
                 </div>
               </Link>
