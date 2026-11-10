@@ -21,7 +21,7 @@ import {
 /**
  * Hand-off step 2 — the authorization code lands here, in the webview, so the
  * PKCE verifier generated for it can travel to the app alongside it. The app
- * exchanges the pair at `{apiBase}/oauth2/v1/apps/token`.
+ * exchanges the pair at `{idpBase}/{appId}/oauth2/v1/token`.
  */
 
 /** Errors that simply mean "the silent request needs a real prompt". */
@@ -79,9 +79,10 @@ export default function NativeCallbackPage() {
     setConfig(stored);
     setParams(search);
 
-    // Android webviews block a navigation no user gesture started, and the deep
-    // link is a scheme navigation — so it waits for a tap there. iOS does not.
-    if (stored.platform === "android") return;
+    // Custom-scheme deep links need a user gesture on Android webviews. Plain
+    // http(s) redirects (e.g. /native/auth-code for local testing) do not.
+    const isHttpRedirect = /^https?:/i.test(stored.redirectUrl);
+    if (stored.platform === "android" && !isHttpRedirect) return;
 
     try {
       handOffToNativeApp(stored, search);
@@ -104,7 +105,10 @@ export default function NativeCallbackPage() {
   };
 
   const needsGesture =
-    !error && config?.platform === "android" && params !== null;
+    !error &&
+    config?.platform === "android" &&
+    params !== null &&
+    !/^https?:/i.test(config.redirectUrl);
 
   return (
     <section className="flex justify-center">

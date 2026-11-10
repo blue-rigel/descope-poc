@@ -15,6 +15,10 @@ import { setSilentAuthorization } from "@/lib/native-handoff";
  * authentication lives here — the apps ship no auth screens of their own — so
  * this covers the three methods the flows support: email + password, an email
  * one-time code, and Google.
+ *
+ * On success the host navigates to `/native/handoff`, which mints an
+ * authorization code for Federated App MAGW_Mobile_App and returns it on the
+ * app's `redirectUrl` (use `/native/auth-code` while testing in a browser).
  */
 
 const CODE_LENGTH = 6;

@@ -16,6 +16,8 @@
  * "redirect in flight" flag.
  */
 
+import { MAGW_MOBILE_CLIENT_ID } from "@/lib/descope-config";
+
 export type Platform = "web" | "ios" | "android";
 
 /** Publisher configuration — the counterpart of the legacy `clientConfig.json`. */
@@ -24,7 +26,7 @@ export type ClientConfig = {
   platform: Platform;
   /** Native app deep link that receives the final authorization `code`. */
   redirectUrl: string;
-  /** Inbound-app client id override; defaults to NEXT_PUBLIC_APP_ID. */
+  /** Federated App client id override; defaults to MAGW_Mobile_App. */
   clientId?: string;
   language?: string;
   providers?: string[];
@@ -51,6 +53,8 @@ export const STATIC_BASE_URL =
 export const NATIVE_LOGIN_PATH = "/native/login";
 export const NATIVE_HANDOFF_PATH = "/native/handoff";
 export const NATIVE_CALLBACK_PATH = "/native/callback";
+/** Browser-friendly redirect that displays the authorization code for testing. */
+export const NATIVE_AUTH_CODE_PATH = "/native/auth-code";
 
 export function isNativePlatform(platform: Platform | undefined) {
   return platform === "ios" || platform === "android";
@@ -127,7 +131,12 @@ export async function resolveClientConfig(
   const redirectUrl = params.get("redirectUrl")?.trim();
 
   if (pubId && platform && isValidRedirectUrl(redirectUrl)) {
-    const config: ClientConfig = { pubId, platform, redirectUrl };
+    const config: ClientConfig = {
+      pubId,
+      platform,
+      redirectUrl,
+      clientId: MAGW_MOBILE_CLIENT_ID,
+    };
     storeClientConfig(config);
     return config;
   }
